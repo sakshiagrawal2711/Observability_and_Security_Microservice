@@ -1,0 +1,302 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Observability Dashboard</title>
+  <style>
+    :root{ --bg:#f5f7fb; --card:#ffffff; --muted:#6b7280; --accent:#2563eb; --danger:#ef4444; --success:#10b981 }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; margin:0;background:var(--bg);color:#0f172a}
+    .wrap{max-width:1100px;margin:24px auto;padding:16px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    header h1{font-size:1.25rem;margin:0}
+    #user_info{font-size:0.9rem;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:900px){ .grid{grid-template-columns: 360px 1fr} }
+    .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04)}
+  .auth-box{background:linear-gradient(180deg,#fbfdff,#ffffff);padding:10px;border-radius:8px;border:1px solid #e6eefb}
+  .auth-section{display:flex;flex-direction:column;gap:6px;padding:6px}
+    .card h2{margin:0 0 8px 0;font-size:1rem}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    label{font-size:0.9rem;color:var(--muted)}
+    input[type="text"], input[type="password"], input[type="number"], input[type="datetime-local"]{padding:8px;border:1px solid #e6edf3;border-radius:8px}
+    button{background:var(--accent);color:white;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+    button.secondary{background:#eef2ff;color:var(--accent)}
+    button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(37,99,235,0.12)}
+    .muted{color:var(--muted)}
+    pre{background:#0b1220;color:#e6eef9;padding:10px;border-radius:8px;overflow:auto;font-size:0.85rem}
+    #chart-wrap{background:linear-gradient(90deg,#fff 0%, #fbfdff 100%);padding:12px;border-radius:10px}
+    .small{font-size:0.85rem}
+    .row{display:flex;gap:8px;align-items:center}
+    .alerts-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+    .alert-item{padding:8px;border-radius:8px;background:#fff7f7;border:1px solid #fee2e2;color:var(--danger)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Observability Dashboard</h1>
+      <div id="user_info">Not logged in</div>
+    </header>
+
+    <div class="grid">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <h2>Account</h2>
+          <div class="auth-box">
+            <div style="display:flex;gap:8px">
+              <div style="flex:1" class="auth-section">
+                <div class="muted small">Register</div>
+                <input id="reg_username" placeholder="new username" />
+                <input id="reg_password" type="password" placeholder="new password" />
+                <div style="display:flex;gap:8px">
+                  <button id="btn_register" class="secondary">Create account</button>
+                </div>
+              </div>
+              <div style="width:1px;background:#eef2ff;margin:6px 0"></div>
+              <div style="flex:1" class="auth-section">
+                <div class="muted small">Login</div>
+                <input id="ui_username" placeholder="username" />
+                <input id="ui_password" type="password" placeholder="password" />
+                <div style="display:flex;gap:8px">
+                  <button id="btn_login">Login</button>
+                  <button id="btn_logout" class="ghost">Logout</button>
+                </div>
+              </div>
+            </div>
+            <div id="auth_msg" class="small muted" style="margin-top:8px"></div>
+          </div>
+        </div>
+
+        <div class="card" id="summary_card">
+          <h2>Summary</h2>
+          <div class="row" style="gap:10px;margin-bottom:8px">
+            <div style="flex:1;background:#fff;padding:10px;border-radius:8px;text-align:center">
+              <div class="muted">Total Alerts</div>
+              <div id="summary_total" style="font-weight:700;font-size:1.25rem">—</div>
+            </div>
+            <div style="flex:1;background:#fff;padding:10px;border-radius:8px;text-align:center">
+              <div class="muted">Avg CPU (last 10)</div>
+              <div id="summary_cpu" style="font-weight:700">—</div>
+            </div>
+            <div style="flex:1;background:#fff;padding:10px;border-radius:8px;text-align:center">
+              <div class="muted">Avg Memory (last 10)</div>
+              <div id="summary_mem" style="font-weight:700">—</div>
+            </div>
+          </div>
+          <div style="margin-top:6px">
+            <div class="muted small">Last alerts</div>
+            <ul id="last_alerts" class="alerts-list" style="margin-top:6px"></ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Thresholds</h2>
+          <div class="row" style="margin-bottom:8px">
+            <label class="small">CPU:</label>
+            <input id="cpu" type="number" style="width:100px" />
+            <label class="small">Memory:</label>
+            <input id="mem" type="number" style="width:100px" />
+            <button id="save">Save</button>
+          </div>
+          <div id="msg" class="small muted"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" id="chart-card">
+          <h2>Charts</h2>
+          <div class="controls" style="margin-bottom:8px">
+            <label>Start: <input id="start" type="datetime-local" /></label>
+            <label>End: <input id="end" type="datetime-local" /></label>
+            <button id="load_history" class="secondary">Load History</button>
+            <button id="clear_history" class="ghost">Clear</button>
+          </div>
+          <div id="chart-wrap"><canvas id="chart"></canvas></div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h2>Alerts (last 10)</h2>
+          <div id="alerts_container">
+            <ul id="alerts_list" class="alerts-list" style="margin-top:6px">Loading...</ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Persist token and username in localStorage; enhance UI updates
+    let token = localStorage.getItem('token') || null;
+    let username = localStorage.getItem('username') || null;
+    function saveToken(t){ token = t; if(t) localStorage.setItem('token', t); else localStorage.removeItem('token'); }
+    function saveUser(u){ username = u; if(u) localStorage.setItem('username', u); else localStorage.removeItem('username'); }
+    function authHeaders(){ return token? {'token': token} : {} }
+
+    function setUserInfo(){
+      const el = document.getElementById('user_info');
+      if(username) el.textContent = `User: ${username}`; else el.textContent = 'Not logged in';
+    }
+
+    async function getJson(path){
+      const res = await fetch(path, {headers: authHeaders()});
+      return res.json();
+    }
+
+    async function register(){
+      const u = document.getElementById('reg_username').value;
+      const p = document.getElementById('reg_password').value;
+      if(!u || !p){ document.getElementById('auth_msg').textContent = 'Please provide username and password'; return; }
+      const r = await fetch('/register', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
+      const data = await r.json();
+      if(r.status === 200){ document.getElementById('auth_msg').textContent = 'Account created — please login'; document.getElementById('reg_username').value=''; document.getElementById('reg_password').value=''; }
+      else { document.getElementById('auth_msg').textContent = data.error || JSON.stringify(data); }
+    }
+
+    async function login(){
+      const u = document.getElementById('ui_username').value;
+      const p = document.getElementById('ui_password').value;
+      const r = await fetch('/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
+      const data = await r.json();
+      if(r.status===200 && data.token){ saveToken(data.token); saveUser(u); document.getElementById('auth_msg').textContent = 'Logged in'; }
+      else document.getElementById('auth_msg').textContent = JSON.stringify(data);
+      setUserInfo();
+      await refresh();
+    }
+
+    async function logout(){
+      if(!token) { document.getElementById('auth_msg').textContent = 'Not logged in'; return; }
+      const r = await fetch('/logout', {method:'POST', headers:{...authHeaders(), 'Content-Type':'application/json'}});
+      if(r.status===200) { saveToken(null); saveUser(null); document.getElementById('auth_msg').textContent = 'Logged out'; setUserInfo(); await refresh(); }
+      else { document.getElementById('auth_msg').textContent = 'Logout failed'; }
+    }
+
+    document.getElementById('btn_register').onclick = register;
+    document.getElementById('btn_login').onclick = login;
+    document.getElementById('btn_logout').onclick = logout;
+
+    let chart = null;
+    function createChart(){
+      const ctx = document.getElementById('chart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {label:'CPU %', data:[], borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.08)', fill:true, tension:0.2},
+            {label:'Memory %', data:[], borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.08)', fill:true, tension:0.2}
+          ]
+        },
+        options: {animation:false, responsive:true, maintainAspectRatio:false, scales:{y:{min:0,max:100}}}
+      });
+    }
+
+    // load metrics either from live /metrics or /metrics/history when range provided
+    async function loadMetrics(limit=20, start=null, end=null){
+      if(start && end){
+        const startIso = new Date(start).toISOString();
+        const endIso = new Date(end).toISOString();
+        return await getJson(`/metrics/history?start=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}`);
+      }
+      return await getJson(`/metrics?limit=${limit}`);
+    }
+
+    async function refresh(){
+      try{
+        if(!token){
+          // not logged in - clear summary and alerts area
+          document.getElementById('summary_total').textContent = '—';
+          document.getElementById('summary_cpu').textContent = '—';
+          document.getElementById('summary_mem').textContent = '—';
+          const alertsListEl = document.getElementById('alerts_list');
+          const lastAlertsEl = document.getElementById('last_alerts');
+          if(alertsListEl) alertsListEl.innerHTML = '<li class="small muted">Login to see alerts</li>';
+          if(lastAlertsEl) lastAlertsEl.innerHTML = '<li class="small muted">Login to see recent alerts</li>';
+          return;
+        }
+        const s = await getJson('/summary?n=10');
+        // populate summary cards (no raw JSON)
+        if(s){
+          document.getElementById('summary_total').textContent = s.total_alerts ?? '—';
+          document.getElementById('summary_cpu').textContent = (s.avg_last_10_cpu!=null)? s.avg_last_10_cpu.toFixed(2) + ' %' : '—';
+          document.getElementById('summary_mem').textContent = (s.avg_last_10_memory!=null)? s.avg_last_10_memory.toFixed(2) + ' %' : '—';
+        }
+        const m = await loadMetrics(20);
+        const alerts = await getJson('/alerts?limit=10');
+        // render alerts list and last alerts as friendly items (no raw JSON)
+        const lastAlertsEl = document.getElementById('last_alerts');
+        const alertsListEl = document.getElementById('alerts_list');
+        if(lastAlertsEl) lastAlertsEl.innerHTML = '';
+        if(alertsListEl) alertsListEl.innerHTML = '';
+        if(alerts && alerts.value && alerts.value.length){
+          alerts.value.forEach((a, idx)=>{
+            const li = document.createElement('li');
+            li.className = 'alert-item';
+            li.textContent = `${new Date(a.ts).toLocaleString()} — ${a.type.toUpperCase()}: ${a.value}`;
+            // push into main alerts list (show up to 10)
+            if(alertsListEl) alertsListEl.appendChild(li.cloneNode(true));
+            // also fill last_alerts (first 5)
+            if(lastAlertsEl && idx < 5){
+              const li2 = document.createElement('li'); li2.className='alert-item'; li2.textContent = li.textContent; lastAlertsEl.appendChild(li2);
+            }
+          });
+        } else {
+          if(alertsListEl) alertsListEl.innerHTML = '<li class="small muted">No alerts</li>';
+          if(lastAlertsEl) lastAlertsEl.innerHTML = '<li class="small muted">No recent alerts</li>';
+        }
+  // update chart
+        const labels = m.map(x=>new Date(x.ts).toLocaleTimeString()).reverse();
+        const cpuData = m.map(x=>x.cpu).reverse();
+        const memData = m.map(x=>x.memory).reverse();
+        if(!chart) createChart();
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = cpuData;
+        chart.data.datasets[1].data = memData;
+        chart.update();
+
+  const t = await getJson('/thresholds');
+  if(t){ document.getElementById('cpu').value = t.cpu_threshold; document.getElementById('mem').value = t.memory_threshold; }
+      }catch(e){ console.error(e); document.getElementById('summary').textContent = 'Error: ' + e }
+    }
+
+    document.getElementById('save').onclick = async ()=>{
+      const cpu = document.getElementById('cpu').value;
+      const mem = document.getElementById('mem').value;
+      const res = await fetch('/thresholds', {method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'}, body:JSON.stringify({cpu_threshold:cpu, memory_threshold:mem})});
+      const data = await res.json();
+      if(res.status===200) document.getElementById('msg').textContent = 'Thresholds updated';
+      else document.getElementById('msg').textContent = data.error || JSON.stringify(data);
+      setTimeout(refresh, 500);
+    }
+
+    // history controls
+    document.getElementById('load_history').onclick = async ()=>{
+      const start = document.getElementById('start').value;
+      const end = document.getElementById('end').value;
+      if(!start || !end){ alert('Please pick both start and end'); return; }
+      const m = await loadMetrics(0, start, end);
+      // update chart with history
+      const labels = m.map(x=>new Date(x.ts).toLocaleString()).reverse();
+      const cpuData = m.map(x=>x.cpu).reverse();
+      const memData = m.map(x=>x.memory).reverse();
+      if(!chart) createChart();
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = cpuData;
+      chart.data.datasets[1].data = memData;
+      chart.update();
+    };
+
+    document.getElementById('clear_history').onclick = async ()=>{ document.getElementById('start').value=''; document.getElementById('end').value=''; await refresh(); };
+
+    // auto-refresh only when logged in and not viewing history
+    setInterval(()=>{ if(token && !document.getElementById('start').value) refresh(); }, 5000);
+
+    // initial load
+    setUserInfo();
+    if(token) document.getElementById('auth_msg').textContent = 'Using saved token';
+    refresh();
+  </script>
+</body>
+</html>

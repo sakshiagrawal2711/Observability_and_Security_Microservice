@@ -1,0 +1,7 @@
+fastapi>=0.95
+uvicorn[standard]>=0.22
+psutil>=5.9
+pytest>=7.0
+httpx>=0.24
+pytest-asyncio>=0.22
+passlib>=1.7
