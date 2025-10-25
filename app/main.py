@@ -1,11 +1,15 @@
 import hashlib
 import secrets
 import asyncio
+import os
 from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi.responses import Response
+from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from . import db
 from . import models
+from . import notifier
 import psutil
 from passlib.hash import pbkdf2_sha256
 
@@ -50,8 +54,18 @@ async def metric_collector():
             # generate alerts based on thresholds
             if cpu > cpu_th:
                 db.add_alert('cpu', cpu)
+                # schedule notifier asynchronously so collector isn't blocked
+                try:
+                    asyncio.create_task(notifier.notify_alert('cpu', cpu, datetime.utcnow().isoformat()))
+                except Exception:
+                    # if scheduling fails, continue without raising
+                    pass
             if mem > mem_th:
                 db.add_alert('memory', mem)
+                try:
+                    asyncio.create_task(notifier.notify_alert('memory', mem, datetime.utcnow().isoformat()))
+                except Exception:
+                    pass
             await asyncio.sleep(4.5)
     except asyncio.CancelledError:
         return
@@ -119,6 +133,12 @@ def summary(n: int = 5, token: str = Depends(require_token)):
 
 @app.get('/thresholds')
 def get_thresholds(token: str = Depends(require_token)):
+    # attempt to return per-user thresholds if set; fall back to global config
+    user_id = db.get_user_id_by_token(token)
+    if user_id:
+        ut = db.get_user_thresholds(user_id)
+        if ut:
+            return ut
     return db.get_thresholds()
 
 
@@ -129,7 +149,12 @@ def post_thresholds(payload: dict, token: str = Depends(require_token)):
         mem = float(payload.get('memory_threshold'))
     except Exception:
         raise HTTPException(status_code=400, detail='invalid payload')
-    db.set_thresholds(cpu, mem)
+    # store per-user thresholds when possible, otherwise update global config
+    user_id = db.get_user_id_by_token(token)
+    if user_id:
+        db.set_user_thresholds(user_id, cpu, mem)
+    else:
+        db.set_thresholds(cpu, mem)
     return {'cpu_threshold': cpu, 'memory_threshold': mem}
 
 
@@ -160,6 +185,30 @@ def metrics_history(start: str, end: str, token: str = Depends(require_token)):
     return data
 
 
+@app.get('/metrics/export')
+def metrics_export(start: Optional[str] = None, end: Optional[str] = None, token: str = Depends(require_token)):
+    """Return metrics as CSV. If start and end ISO strings are provided, export that range; otherwise export recent metrics (limit 1000)."""
+    try:
+        if start and end:
+            rows = db.get_metrics_by_range(start, end)
+        else:
+            rows = db.get_metrics(limit=1000)
+    except Exception:
+        raise HTTPException(status_code=400, detail='invalid time range')
+
+    # build CSV
+    lines = ['timestamp,cpu,memory']
+    for r in rows:
+        # ensure values are serialized without extra formatting
+        lines.append(f"{r.get('ts')},{r.get('cpu')},{r.get('memory')}")
+
+    csv_text = "\n".join(lines)
+    fname = f"metrics_{datetime.utcnow().isoformat().replace(':','-')}.csv"
+    return Response(content=csv_text, media_type='text/csv', headers={
+        'Content-Disposition': f'attachment; filename="{fname}"'
+    })
+
+
 # Serve a tiny dashboard if present
 from fastapi.staticfiles import StaticFiles
 import pathlib
@@ -167,3 +216,32 @@ import pathlib
 static_dir = pathlib.Path(__file__).parent.parent / 'dashboard'
 if static_dir.exists():
     app.mount('/dashboard', StaticFiles(directory=str(static_dir), html=True), name='dashboard')
+
+
+# --- simple admin protection using an ADMIN_TOKEN env var ---
+from fastapi import Header
+
+
+def require_admin(x_admin_token: str = Header(None)):
+    admin_token = os.environ.get('ADMIN_TOKEN')
+    if not admin_token:
+        raise HTTPException(status_code=403, detail='admin not configured')
+    if not x_admin_token or x_admin_token != admin_token:
+        raise HTTPException(status_code=401, detail='invalid admin token')
+    return True
+
+
+@app.get('/admin/thresholds')
+def admin_get_thresholds(_ok: bool = Depends(require_admin)):
+    return db.get_thresholds()
+
+
+@app.post('/admin/thresholds')
+def admin_post_thresholds(payload: dict, _ok: bool = Depends(require_admin)):
+    try:
+        cpu = float(payload.get('cpu_threshold'))
+        mem = float(payload.get('memory_threshold'))
+    except Exception:
+        raise HTTPException(status_code=400, detail='invalid payload')
+    db.set_thresholds(cpu, mem)
+    return {'cpu_threshold': cpu, 'memory_threshold': mem}

@@ -5,39 +5,64 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Observability Dashboard</title>
   <style>
-    :root{ --bg:#f5f7fb; --card:#ffffff; --muted:#6b7280; --accent:#2563eb; --danger:#ef4444; --success:#10b981 }
+    :root{ --bg:#071029; --panel:#0b1220; --muted:#94a3b8; --accent:#06b6d4; --accent-2:#7c3aed; --success:#10b981; --danger:#ef4444 }
     *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; margin:0;background:var(--bg);color:#0f172a}
-    .wrap{max-width:1100px;margin:24px auto;padding:16px}
-    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
-    header h1{font-size:1.25rem;margin:0}
-    #user_info{font-size:0.9rem;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:1fr;gap:12px}
-    @media(min-width:900px){ .grid{grid-template-columns: 360px 1fr} }
-    .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 1px 2px rgba(15,23,42,0.04)}
-  .auth-box{background:linear-gradient(180deg,#fbfdff,#ffffff);padding:10px;border-radius:8px;border:1px solid #e6eefb}
-  .auth-section{display:flex;flex-direction:column;gap:6px;padding:6px}
-    .card h2{margin:0 0 8px 0;font-size:1rem}
-    .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-    label{font-size:0.9rem;color:var(--muted)}
-    input[type="text"], input[type="password"], input[type="number"], input[type="datetime-local"]{padding:8px;border:1px solid #e6edf3;border-radius:8px}
-    button{background:var(--accent);color:white;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
-    button.secondary{background:#eef2ff;color:var(--accent)}
-    button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(37,99,235,0.12)}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; margin:0;background:linear-gradient(180deg,#051024,#082433);color:#e6eef9}
+    .wrap{max-width:1200px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    header h1{font-size:1.4rem;margin:0}
+    #user_info{font-size:0.95rem;color:var(--muted);display:flex;gap:8px;align-items:center}
+    .token-pill{background:rgba(255,255,255,0.03);padding:6px 10px;border-radius:999px;font-size:0.85rem;color:var(--muted);display:inline-flex;gap:8px;align-items:center}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px}
+    @media(min-width:1000px){ .grid{grid-template-columns:360px 1fr} }
+    .card{background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.03)}
+  .auth-box{background:transparent;padding:6px;border-radius:8px}
+  .auth-box > div{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+  .auth-section{display:flex;flex-direction:column;gap:6px;padding:6px;flex:1;min-width:0}
+  .auth-section input{width:100%;max-width:100%;box-sizing:border-box}
+  .auth-divider{width:1px;background:rgba(255,255,255,0.03);margin:6px 0;align-self:stretch}
+    .card h2{margin:0 0 8px 0;font-size:1rem;color:#e6eef9}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  label{font-size:0.9rem;color:var(--muted)}
+  input[type="text"], input[type="password"], input[type="number"], input[type="datetime-local"]{padding:8px;border:1px solid rgba(255,255,255,0.04);border-radius:8px;background:transparent;color:#e6eef9;min-width:0}
+  button{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;border:0;padding:8px 12px;border-radius:10px;cursor:pointer}
+    button.secondary{background:transparent;color:var(--accent);border:1px solid rgba(6,182,212,0.12)}
+    button.ghost{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.03)}
     .muted{color:var(--muted)}
-    pre{background:#0b1220;color:#e6eef9;padding:10px;border-radius:8px;overflow:auto;font-size:0.85rem}
-    #chart-wrap{background:linear-gradient(90deg,#fff 0%, #fbfdff 100%);padding:12px;border-radius:10px}
+    .kpi{display:flex;gap:10px}
+    .kpi .tile{flex:1;background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;text-align:center}
+    .kpi .num{font-size:1.2rem;font-weight:700}
     .small{font-size:0.85rem}
-    .row{display:flex;gap:8px;align-items:center}
-    .alerts-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
-    .alert-item{padding:8px;border-radius:8px;background:#fff7f7;border:1px solid #fee2e2;color:var(--danger)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .alerts-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+    .alert-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02)}
+    .badge{padding:6px 8px;border-radius:8px;font-weight:600}
+    .badge.mem{background:rgba(124,58,237,0.12);color:#c7b3ff}
+    .badge.cpu{background:rgba(6,182,212,0.08);color:#9ff1fb}
+    table{width:100%;border-collapse:collapse;color:#e6eef9}
+    th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.03);text-align:left}
+    th{font-size:0.85rem;color:var(--muted)}
+    tr:nth-child(even) td{background:rgba(255,255,255,0.01)}
+    .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between}
+  /* Ensure buttons in small rows (like thresholds) don't overflow and keep their intrinsic size */
+  .card .row button{flex:0 0 auto}
+    .center{display:flex;gap:8px}
+    .toast{position:fixed;right:20px;bottom:20px;background:rgba(11,18,32,0.9);border:1px solid rgba(255,255,255,0.03);padding:10px 14px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.6);z-index:2000}
+    .loader{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,0.4);z-index:1500}
+    .spinner{width:56px;height:56px;border-radius:50%;border:6px solid rgba(255,255,255,0.08);border-top-color:var(--accent);animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>Observability Dashboard</h1>
-      <div id="user_info">Not logged in</div>
+      <div>
+        <h1>Observability Dashboard</h1>
+        <div class="muted small">System metrics, alerts, and thresholds — submission-ready</div>
+      </div>
+      <div id="user_info">
+        Not logged in
+      </div>
     </header>
 
     <div class="grid">
@@ -46,7 +71,7 @@
           <h2>Account</h2>
           <div class="auth-box">
             <div style="display:flex;gap:8px">
-              <div style="flex:1" class="auth-section">
+              <div style="flex:1;min-width:0" class="auth-section">
                 <div class="muted small">Register</div>
                 <input id="reg_username" placeholder="new username" />
                 <input id="reg_password" type="password" placeholder="new password" />
@@ -54,8 +79,8 @@
                   <button id="btn_register" class="secondary">Create account</button>
                 </div>
               </div>
-              <div style="width:1px;background:#eef2ff;margin:6px 0"></div>
-              <div style="flex:1" class="auth-section">
+              <div class="auth-divider" aria-hidden="true"></div>
+              <div style="flex:1;min-width:0" class="auth-section">
                 <div class="muted small">Login</div>
                 <input id="ui_username" placeholder="username" />
                 <input id="ui_password" type="password" placeholder="password" />
@@ -122,9 +147,29 @@
             <ul id="alerts_list" class="alerts-list" style="margin-top:6px">Loading...</ul>
           </div>
         </div>
+
+        <div class="card" style="margin-top:12px">
+          <h2>Metrics History</h2>
+          <div class="toolbar" style="margin-bottom:8px;align-items:center;">
+            <div class="center">
+              <button id="export_csv" class="secondary">Export CSV</button>
+            </div>
+            <div class="muted small">Most recent metrics (click Export to download visible rows)</div>
+          </div>
+          <div style="max-height:260px;overflow:auto">
+            <table id="metrics_table">
+              <thead>
+                <tr><th>Timestamp (IST)</th><th>CPU %</th><th>Memory %</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+
+  <div id="loader" class="loader" style="display:none"><div class="spinner" role="status" aria-label="Loading"></div></div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
@@ -137,8 +182,47 @@
 
     function setUserInfo(){
       const el = document.getElementById('user_info');
-      if(username) el.textContent = `User: ${username}`; else el.textContent = 'Not logged in';
+      if(username){
+        const tokenShort = token ? (token.slice(0,8) + '...' + token.slice(-6)) : '';
+        el.innerHTML = `<span class="token-pill">User: ${username} <button id="copy_token" class="ghost" title="Copy token">Copy</button></span>`;
+        const btn = document.getElementById('copy_token'); if(btn) btn.onclick = copyToken;
+      } else {
+        el.textContent = 'Not logged in';
+      }
     }
+
+    function copyToken(){
+      if(!token){ showToast('No token to copy'); return; }
+      navigator.clipboard.writeText(token).then(()=> showToast('Token copied to clipboard')).catch(()=> showToast('Copy failed'));
+    }
+
+    // Parse an ISO timestamp and return a Date object.
+    // If the timestamp string does not include an explicit timezone, treat it as UTC by appending 'Z'.
+    function parseISOtoDate(iso){
+      if(!iso) return new Date();
+      // already has timezone info (Z or +hh:mm or -hh:mm)
+      if(/(Z|[+\-]\d{2}:?\d{2})$/.test(iso)) return new Date(iso);
+      // otherwise assume the string is in UTC and append Z so JS parses it as UTC consistently
+      // some servers return '2025-10-24T16:03:49.413448' (no timezone) — treat these as UTC
+      return new Date(iso + 'Z');
+    }
+
+    // Format a timestamp in Indian Standard Time (IST)
+    function formatIST(ts, opts){
+      try{
+        const d = (ts instanceof Date) ? ts : parseISOtoDate(ts);
+        const o = Object.assign({}, opts || {});
+        return d.toLocaleString('en-IN', Object.assign({timeZone:'Asia/Kolkata'}, o));
+      }catch(e){ return (ts instanceof Date) ? ts.toLocaleString() : String(ts); }
+    }
+
+    function showToast(msg){
+      const d = document.createElement('div'); d.className='toast'; d.textContent = msg; document.body.appendChild(d);
+      setTimeout(()=>{ d.style.opacity='0'; setTimeout(()=>d.remove(),300) }, 3000);
+    }
+
+    function showLoader(){ document.getElementById('loader').style.display='flex'; }
+    function hideLoader(){ document.getElementById('loader').style.display='none'; }
 
     async function getJson(path){
       const res = await fetch(path, {headers: authHeaders()});
@@ -204,7 +288,9 @@
     }
 
     async function refresh(){
+      showLoader();
       try{
+        setUserInfo();
         if(!token){
           // not logged in - clear summary and alerts area
           document.getElementById('summary_total').textContent = '—';
@@ -214,51 +300,62 @@
           const lastAlertsEl = document.getElementById('last_alerts');
           if(alertsListEl) alertsListEl.innerHTML = '<li class="small muted">Login to see alerts</li>';
           if(lastAlertsEl) lastAlertsEl.innerHTML = '<li class="small muted">Login to see recent alerts</li>';
+          hideLoader();
           return;
         }
+
         const s = await getJson('/summary?n=10');
-        // populate summary cards (no raw JSON)
         if(s){
           document.getElementById('summary_total').textContent = s.total_alerts ?? '—';
           document.getElementById('summary_cpu').textContent = (s.avg_last_10_cpu!=null)? s.avg_last_10_cpu.toFixed(2) + ' %' : '—';
           document.getElementById('summary_mem').textContent = (s.avg_last_10_memory!=null)? s.avg_last_10_memory.toFixed(2) + ' %' : '—';
         }
-        const m = await loadMetrics(20);
-        const alerts = await getJson('/alerts?limit=10');
-        // render alerts list and last alerts as friendly items (no raw JSON)
+
+        const mRes = await loadMetrics(20);
+        const m = (mRes && mRes.value) ? mRes.value : (Array.isArray(mRes) ? mRes : (mRes || []));
+
+        const alertsRes = await getJson('/alerts?limit=10');
+        const alerts = alertsRes && alertsRes.value ? alertsRes.value : (Array.isArray(alertsRes) ? alertsRes : (alertsRes || []));
+
         const lastAlertsEl = document.getElementById('last_alerts');
         const alertsListEl = document.getElementById('alerts_list');
         if(lastAlertsEl) lastAlertsEl.innerHTML = '';
         if(alertsListEl) alertsListEl.innerHTML = '';
-        if(alerts && alerts.value && alerts.value.length){
-          alerts.value.forEach((a, idx)=>{
+        if(alerts && alerts.length){
+          alerts.forEach((a, idx)=>{
             const li = document.createElement('li');
             li.className = 'alert-item';
-            li.textContent = `${new Date(a.ts).toLocaleString()} — ${a.type.toUpperCase()}: ${a.value}`;
-            // push into main alerts list (show up to 10)
+            const badge = document.createElement('span'); badge.className = 'badge ' + (a.type==='memory'?'mem':'cpu'); badge.textContent = a.type.toUpperCase();
+            const left = document.createElement('div'); left.innerHTML = `<div style="font-weight:600">${formatIST(a.ts)}</div><div class="muted small">Value: ${a.value}</div>`;
+            li.appendChild(left); li.appendChild(badge);
             if(alertsListEl) alertsListEl.appendChild(li.cloneNode(true));
-            // also fill last_alerts (first 5)
-            if(lastAlertsEl && idx < 5){
-              const li2 = document.createElement('li'); li2.className='alert-item'; li2.textContent = li.textContent; lastAlertsEl.appendChild(li2);
-            }
+            if(lastAlertsEl && idx < 5) lastAlertsEl.appendChild(li);
           });
         } else {
           if(alertsListEl) alertsListEl.innerHTML = '<li class="small muted">No alerts</li>';
           if(lastAlertsEl) lastAlertsEl.innerHTML = '<li class="small muted">No recent alerts</li>';
         }
-  // update chart
-        const labels = m.map(x=>new Date(x.ts).toLocaleTimeString()).reverse();
-        const cpuData = m.map(x=>x.cpu).reverse();
-        const memData = m.map(x=>x.memory).reverse();
-        if(!chart) createChart();
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = cpuData;
-        chart.data.datasets[1].data = memData;
-        chart.update();
 
-  const t = await getJson('/thresholds');
-  if(t){ document.getElementById('cpu').value = t.cpu_threshold; document.getElementById('mem').value = t.memory_threshold; }
-      }catch(e){ console.error(e); document.getElementById('summary').textContent = 'Error: ' + e }
+        // update chart and metrics table
+        const list = Array.isArray(m) ? m : (m.value || []);
+        if(list && list.length){
+          if(!chart) createChart();
+          const labels = list.map(x=>formatIST(x.ts, {hour:'2-digit', minute:'2-digit', second:'2-digit'})).reverse();
+          const cpuData = list.map(x=>x.cpu).reverse();
+          const memData = list.map(x=>x.memory).reverse();
+          chart.data.labels = labels;
+          chart.data.datasets[0].data = cpuData;
+          chart.data.datasets[1].data = memData;
+          chart.update();
+          // populate table
+          const tbody = document.querySelector('#metrics_table tbody'); if(tbody){ tbody.innerHTML=''; list.slice().reverse().forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${formatIST(r.ts)}</td><td>${r.cpu}</td><td>${r.memory}</td>`; tbody.appendChild(tr); }); }
+        }
+
+        const t = await getJson('/thresholds');
+        if(t){ document.getElementById('cpu').value = t.cpu_threshold; document.getElementById('mem').value = t.memory_threshold; }
+
+        hideLoader();
+      }catch(e){ console.error(e); hideLoader(); showToast('Error while refreshing data'); }
     }
 
     document.getElementById('save').onclick = async ()=>{
@@ -276,19 +373,49 @@
       const start = document.getElementById('start').value;
       const end = document.getElementById('end').value;
       if(!start || !end){ alert('Please pick both start and end'); return; }
-      const m = await loadMetrics(0, start, end);
-      // update chart with history
-      const labels = m.map(x=>new Date(x.ts).toLocaleString()).reverse();
-      const cpuData = m.map(x=>x.cpu).reverse();
-      const memData = m.map(x=>x.memory).reverse();
+      const mRes = await loadMetrics(0, start, end);
+      const list = (mRes && mRes.value) ? mRes.value : (Array.isArray(mRes) ? mRes : (mRes || []));
+      if(!list || !list.length){ showToast('No metrics found in range'); return; }
+      const labels = list.map(x=>formatIST(x.ts, {hour:'2-digit', minute:'2-digit', second:'2-digit'})).reverse();
+      const cpuData = list.map(x=>x.cpu).reverse();
+      const memData = list.map(x=>x.memory).reverse();
       if(!chart) createChart();
       chart.data.labels = labels;
       chart.data.datasets[0].data = cpuData;
       chart.data.datasets[1].data = memData;
       chart.update();
+      // populate table
+      const tbody = document.querySelector('#metrics_table tbody'); if(tbody){ tbody.innerHTML=''; list.slice().reverse().forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${formatIST(r.ts)}</td><td>${r.cpu}</td><td>${r.memory}</td>`; tbody.appendChild(tr); }); }
     };
 
     document.getElementById('clear_history').onclick = async ()=>{ document.getElementById('start').value=''; document.getElementById('end').value=''; await refresh(); };
+
+    // Export currently-visible metrics table to CSV
+    function tableToCSV(tableEl){
+      const rows = Array.from(tableEl.querySelectorAll('tr'));
+      return rows.map(r=>{
+        const cols = Array.from(r.querySelectorAll('th,td')).map(c=>`"${String(c.textContent).replace(/"/g,'""')}"`);
+        return cols.join(',');
+      }).join('\n');
+    }
+
+    async function exportCSV(){
+      const table = document.getElementById('metrics_table');
+      if(!table){ showToast('No metrics table found'); return; }
+      const csv = tableToCSV(table);
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const now = new Date();
+      a.download = `metrics_${now.toISOString().replace(/[:.]/g,'-')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('export_csv').onclick = exportCSV;
 
     // auto-refresh only when logged in and not viewing history
     setInterval(()=>{ if(token && !document.getElementById('start').value) refresh(); }, 5000);

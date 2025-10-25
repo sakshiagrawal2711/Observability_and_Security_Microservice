@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Admin - Global Thresholds</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:24px}
+    .card{max-width:600px;padding:16px;border:1px solid #ddd;border-radius:6px}
+    label{display:block;margin-top:12px}
+    input[type=text]{width:100%;padding:8px}
+    button{margin-top:12px;padding:8px 12px}
+    .note{font-size:12px;color:#666}
+  </style>
+</head>
+<body>
+  <h2>Admin - Global Thresholds</h2>
+  <div class="card">
+    <p class="note">Provide the <code>ADMIN_TOKEN</code> (server env) to authenticate admin requests.</p>
+    <label>Admin Token
+      <input id="admin_token" type="text" placeholder="paste admin token here" />
+    </label>
+    <label>CPU threshold (%)
+      <input id="cpu" type="text" />
+    </label>
+    <label>Memory threshold (%)
+      <input id="memory" type="text" />
+    </label>
+    <div>
+      <button id="load">Load</button>
+      <button id="save">Save</button>
+      <span id="status"></span>
+    </div>
+  </div>
+
+  <script>
+    const status = txt => document.getElementById('status').textContent = txt;
+    async function load() {
+      const token = document.getElementById('admin_token').value.trim();
+      if(!token){ status('enter admin token'); return }
+      try{
+        const r = await fetch('/admin/thresholds', {headers: {'x-admin-token': token}});
+        if(!r.ok){ status('error: '+r.status); return }
+        const j = await r.json();
+  document.getElementById('cpu').value = j.cpu_threshold || '';
+  document.getElementById('memory').value = j.memory_threshold || '';
+        status('loaded');
+      }catch(e){ status('error: '+e.message) }
+    }
+    async function save(){
+      const token = document.getElementById('admin_token').value.trim();
+      if(!token){ status('enter admin token'); return }
+      const cpu = document.getElementById('cpu').value.trim();
+      const memory = document.getElementById('memory').value.trim();
+      try{
+        const r = await fetch('/admin/thresholds', {method:'POST', headers: {'Content-Type':'application/json','x-admin-token': token}, body: JSON.stringify({cpu_threshold: cpu, memory_threshold: memory})});
+        if(!r.ok){ status('error: '+r.status); return }
+        const j = await r.json();
+        status('saved');
+      }catch(e){ status('error: '+e.message) }
+    }
+    document.getElementById('load').addEventListener('click', load);
+    document.getElementById('save').addEventListener('click', save);
+  </script>
+</body>
+</html>

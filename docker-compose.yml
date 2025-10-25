@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # optional notifier settings - configure in your environment or .env file
+      - ALERT_SMTP_HOST=${ALERT_SMTP_HOST}
+      - ALERT_SMTP_PORT=${ALERT_SMTP_PORT}
+      - ALERT_SMTP_USER=${ALERT_SMTP_USER}
+      - ALERT_SMTP_PASS=${ALERT_SMTP_PASS}
+      - ALERT_FROM=${ALERT_FROM}
+      - ALERT_TO=${ALERT_TO}
+    volumes:
+      - .:/app
+    restart: unless-stopped

@@ -61,6 +61,15 @@ def init_db():
         value TEXT
     )
     ''')
+    # per-user thresholds (optional)
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS user_thresholds (
+        user_id INTEGER PRIMARY KEY,
+        cpu_threshold REAL,
+        memory_threshold REAL,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+    ''')
     # initialize thresholds if missing
     cur.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('cpu_threshold', '80')")
     cur.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('memory_threshold', '75')")
@@ -154,6 +163,17 @@ def get_thresholds() -> Dict[str, float]:
     return {'cpu_threshold': res.get('cpu_threshold', 80.0), 'memory_threshold': res.get('memory_threshold', 75.0)}
 
 
+def get_user_thresholds(user_id: int) -> Optional[Dict[str, float]]:
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT cpu_threshold, memory_threshold FROM user_thresholds WHERE user_id = ?', (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {'cpu_threshold': float(row['cpu_threshold']), 'memory_threshold': float(row['memory_threshold'])}
+
+
 def set_thresholds(cpu: float, memory: float):
     with _lock:
         conn = get_conn()
@@ -162,6 +182,26 @@ def set_thresholds(cpu: float, memory: float):
         cur.execute("INSERT OR REPLACE INTO config (key, value) VALUES ('memory_threshold', ?)", (str(memory),))
         conn.commit()
         conn.close()
+
+
+def set_user_thresholds(user_id: int, cpu: float, memory: float):
+    with _lock:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("INSERT OR REPLACE INTO user_thresholds (user_id, cpu_threshold, memory_threshold) VALUES (?, ?, ?)", (user_id, float(cpu), float(memory)))
+        conn.commit()
+        conn.close()
+
+
+def get_user_id_by_token(token: str) -> Optional[int]:
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT user_id FROM sessions WHERE token = ?', (token,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return int(row['user_id'])
 
 
 def get_metrics(limit: int = 100):
@@ -174,9 +214,16 @@ def get_metrics(limit: int = 100):
 
 
 def get_metrics_by_range(start_iso: str, end_iso: str):
+    # validate ISO timestamps to ensure callers pass correct values
+    try:
+        s = datetime.fromisoformat(start_iso)
+        e = datetime.fromisoformat(end_iso)
+    except Exception:
+        raise ValueError('invalid time range')
+
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('SELECT cpu, memory, ts FROM metrics WHERE ts >= ? AND ts <= ? ORDER BY ts ASC', (start_iso, end_iso))
+    cur.execute('SELECT cpu, memory, ts FROM metrics WHERE ts >= ? AND ts <= ? ORDER BY ts ASC', (s.isoformat(), e.isoformat()))
     rows = cur.fetchall()
     conn.close()
     return [{'cpu': r['cpu'], 'memory': r['memory'], 'ts': r['ts']} for r in rows]
