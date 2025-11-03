@@ -159,5 +159,10 @@ Notes and recommendations
 - The app currently uses naive UTC timestamps (datetime.utcnow()). For production it is recommended to use timezone-aware datetimes (datetime.now(timezone.utc)). I can convert the codebase to timezone-aware datetimes if you want.
 - The notifier is best-effort: failures are logged but do not stop metric collection. For production you may want retries metrics, monitoring, authentication for webhooks (HMAC), and more robust error reporting.
 
+If you'd like, I can also:
+- Add the GitHub Actions workflow file to the repo now.
+- Harden the notifier (HMAC-signed webhooks, metrics, async queueing).
+- Convert timestamps to timezone-aware objects.
 
+Thanks — tell me which of the next items you want me to implement and I'll proceed one-by-one.
 
