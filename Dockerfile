@@ -12,4 +12,6 @@ COPY . .
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use shell form so the PORT env var provided by hosting platforms (Render) is respected.
+# Default to 8000 when PORT is not set (for local development).
+CMD sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"

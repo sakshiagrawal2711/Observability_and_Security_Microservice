@@ -31,7 +31,12 @@ def hash_password(password: str, salt: str) -> str:
 @app.on_event('startup')
 async def startup_event():
     db.init_db()
-    app.state.collector_task = asyncio.create_task(metric_collector())
+    # Collector can be disabled or tuned via environment variables for hosted platforms (e.g., Render)
+    collector_enabled = os.environ.get('COLLECTOR_ENABLED', '1')
+    if collector_enabled and collector_enabled != '0' and collector_enabled.lower() != 'false':
+        app.state.collector_task = asyncio.create_task(metric_collector())
+    else:
+        app.state.collector_task = None
 
 
 @app.on_event('shutdown')
@@ -43,8 +48,11 @@ async def shutdown_event():
 async def metric_collector():
     # Collect cpu and memory periodically
     try:
+        # sample interval (seconds) can be controlled by SAMPLE_INTERVAL env var
+        sample_interval = float(os.environ.get('SAMPLE_INTERVAL', '5.0'))
         while True:
-            cpu = psutil.cpu_percent(interval=0.5)
+            # use a short non-blocking CPU probe then sleep to control frequency
+            cpu = psutil.cpu_percent(interval=0.1)
             mem = psutil.virtual_memory().percent
             # read thresholds
             th = db.get_thresholds()
@@ -66,9 +74,28 @@ async def metric_collector():
                     asyncio.create_task(notifier.notify_alert('memory', mem, datetime.utcnow().isoformat()))
                 except Exception:
                     pass
-            await asyncio.sleep(4.5)
+            # sleep for configured interval to reduce collector frequency when hosted
+            await asyncio.sleep(max(0.1, sample_interval))
     except asyncio.CancelledError:
         return
+
+
+@app.get('/')
+def root():
+    """Root: redirect to dashboard if static UI is present, otherwise return a small JSON."""
+    static_dir = pathlib.Path(__file__).parent.parent / 'dashboard'
+    if static_dir.exists():
+        # redirect browsers to the dashboard index
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url='/dashboard/')
+    return {'service': 'ok'}
+
+
+@app.get('/health')
+def health():
+    """Simple health endpoint for Render or load balancers."""
+    collector_running = bool(getattr(app.state, 'collector_task', None))
+    return {'status': 'ok', 'collector_running': collector_running}
 
 
 @app.post('/register')

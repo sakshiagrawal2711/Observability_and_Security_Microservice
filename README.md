@@ -144,7 +144,6 @@ jobs:
 				run: python -m pytest -q
 ```
 
-Add the workflow file to the repo and push — GitHub will run tests on each push/PR.
 
 Seeding demo data
 -----------------
